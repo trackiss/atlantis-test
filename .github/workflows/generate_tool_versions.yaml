@@ -1,10 +1,8 @@
 name: Generate and update .tool-versions
 on:
-  pull_request:
-    types:
-      - opened
-      - synchronize
-      - reopened
+  push:
+    branches-ignore:
+      - master
     paths:
       - atlantis.yaml
 
@@ -18,7 +16,6 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.pull_request.head.ref }}
           fetch-depth: 0
       - name: Convert altantis.yaml to json
         id: atlantis-json
