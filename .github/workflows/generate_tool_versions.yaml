@@ -32,7 +32,6 @@ jobs:
         with:
           script: |
             const fs = require('fs');
-            const exec = require('@actions/exec');
 
             const atlantis = JSON.parse(process.env.ATLANTIS_JSON || '{}');
 
