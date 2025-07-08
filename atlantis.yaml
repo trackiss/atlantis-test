@@ -1,0 +1,20 @@
+version: 3
+automerge: true
+parallel_plan: false
+parallel_apply: false
+
+projects:
+  - name: test/hoge
+    dir: test/hoge
+    workspace: default
+    terraform_version: v1.7.5
+    autoplan:
+      when_modified: ["*.tf", "policies/*.json"]
+      enabled: true
+  - name: stg/fuga
+    dir: stg/fuga
+    workspace: default
+    terraform_version: v1.4.6
+    autoplan:
+      when_modified: ["*.tf", "templates/*.yaml"]
+      enabled: true
