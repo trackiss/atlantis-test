@@ -1,0 +1,65 @@
+name: Generate and update .tool-versions
+on:
+  push:
+    branches-ignore:
+      - master
+    paths:
+      - atlantis.yaml
+
+permissions:
+  contents: write
+
+jobs:
+  generate-tool-versions:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Convert altantis.yaml to json
+        id: atlantis-json
+        uses: mikefarah/yq@v4
+        with:
+          cmd: yq -o=json atlantis.yaml
+      - name: Generate .tool-versions
+        uses: actions/github-script@v7
+        env:
+          ATLANTIS_JSON: ${{ steps.atlantis-json.outputs.result }}
+        with:
+          script: |
+            const fs = require('fs');
+
+            const atlantis = JSON.parse(process.env.ATLANTIS_JSON || '{}');
+
+            for (const project of atlantis.projects ?? []) {
+              if (!project.terraform_version || !project.dir || !fs.existsSync(project.dir)) {
+                continue;
+              }
+
+              const terraformVersion = String(project.terraform_version).replace(/^v/, '');
+
+              const toolVersionsPath = `${project.dir}/.tool-versions`;
+              const toolVersionsBody = `terraform ${terraformVersion}\n`;
+
+              try {
+                if (fs.readFileSync(toolVersionsPath, 'utf8') === toolVersionsBody) {
+                  continue;
+                }
+              } catch {}
+
+              fs.writeFileSync(toolVersionsPath, toolVersionsBody);
+              await exec.exec('git', ['add', toolVersionsPath]);
+
+              console.log(`Updated ${toolVersionsPath}`);
+            }
+      - name: Commit and push changes
+        run: |
+          if git diff --cached --quiet; then
+            echo "No .tool-versions changes. Skipping commit."
+          else
+            git config user.name "github-actions[bot]"
+            git config user.email "github-actions[bot]@users.noreply.github.com"
+            git commit -m "Sync .tool-versions from atlantis.yaml"
+            git push
+          fi
